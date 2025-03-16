@@ -17,7 +17,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      /* Removed overflow: hidden; */
+      /* Don’t hide overflow, allow scrolling for smaller screens */
       padding: 20px;
     }
     .container {
@@ -54,10 +54,11 @@
       from { transform: scale(1); }
       to   { transform: scale(1.05); }
     }
+    /* Make wheel responsive: up to 300px, but can shrink if screen is narrower */
     .wheel-container {
-      position: relative; 
-      width: 300px; 
-      height: 300px; 
+      position: relative;
+      width: min(300px, 80vw);
+      height: min(300px, 80vw);
       margin: 20px auto;
     }
     .wheel {
@@ -82,7 +83,8 @@
     }
     .pointer {
       position: absolute; 
-      top: -20px; 
+      /* Slightly lower so it stays within the card for small screens */
+      top: -18px; 
       left: calc(50% - 20px);
       width: 40px; 
       height: 40px; 
@@ -163,31 +165,49 @@ const sections = [
 ];
 
 const wheelElement = document.getElementById('wheel');
-const anglePerSection = 360 / sections.length;
-const sectionRadius = 150; // wheel radius
+const wheelContainer = document.querySelector('.wheel-container');
 
-// Build the wheel (visual only)
-sections.forEach((section, index) => {
-  const sectionElement = document.createElement('div');
-  sectionElement.className = 'wheel-section';
-  sectionElement.style.backgroundColor = section.color;
-  sectionElement.style.transform =
-    `rotate(${index * anglePerSection}deg) skewY(${90 - anglePerSection}deg)`;
-  wheelElement.appendChild(sectionElement);
-  
-  const contentElement = document.createElement('div');
-  contentElement.className = 'section-content';
-  contentElement.textContent = section.text;
-  
-  const centerAngle = index * anglePerSection + anglePerSection / 2;
-  const radians = (centerAngle * Math.PI) / 180;
-  const textRadius = sectionRadius * 0.6;
-  
-  contentElement.style.left = `${150 + textRadius * Math.cos(radians)}px`;
-  contentElement.style.top  = `${150 + textRadius * Math.sin(radians)}px`;
-  contentElement.style.transform = `translate(-50%, -50%) rotate(${centerAngle}deg)`;
-  
-  wheelElement.appendChild(contentElement);
+// We’ll fill these after the wheel is rendered
+let anglePerSection, sectionRadius;
+
+// Build the wheel (visual only) once DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  const containerSize = wheelContainer.offsetWidth;
+  // Each wedge is 1/N of 360
+  anglePerSection = 360 / sections.length;
+  // Radius is half of container width
+  sectionRadius = containerSize / 2;
+
+  // Create each wedge and text
+  sections.forEach((section, index) => {
+    const sectionElement = document.createElement('div');
+    sectionElement.className = 'wheel-section';
+    sectionElement.style.backgroundColor = section.color;
+    sectionElement.style.transform =
+      `rotate(${index * anglePerSection}deg) skewY(${90 - anglePerSection}deg)`;
+    wheelElement.appendChild(sectionElement);
+    
+    // Create text
+    const contentElement = document.createElement('div');
+    contentElement.className = 'section-content';
+    contentElement.textContent = section.text;
+    
+    const centerAngle = index * anglePerSection + anglePerSection / 2;
+    const radians = (centerAngle * Math.PI) / 180;
+
+    // Position text so it’s near the outer edge
+    const textRadius = sectionRadius * 0.6;
+    const x = sectionRadius + textRadius * Math.cos(radians);
+    const y = sectionRadius + textRadius * Math.sin(radians);
+
+    contentElement.style.left = `${x}px`;
+    contentElement.style.top  = `${y}px`;
+    // Rotate text outward for readability
+    contentElement.style.transform = 
+      `translate(-50%, -50%) rotate(${centerAngle}deg)`;
+    
+    wheelElement.appendChild(contentElement);
+  });
 });
 
 // ====== FORCED LANDING & FORCED TEXT LOGIC ======
@@ -215,14 +235,13 @@ spinButton.addEventListener('click', () => {
   // 1) Pick the wedge index to land on
   let targetIndex;
   if (attempts <= forcedIndices.length) {
-    // forced wedge for spins 1..3
     targetIndex = forcedIndices[attempts - 1];
   } else {
-    // random wedge afterward
     targetIndex = Math.floor(Math.random() * sections.length);
   }
 
   // 2) Calculate rotation so pointer lands exactly on the wedge center
+  // (anglePerSection is set once the DOM loads)
   const wedgeCenter = (targetIndex + 0.5) * anglePerSection;
   const extraRotations = 5 * 360;
   const finalRotation = extraRotations + (360 - wedgeCenter);
@@ -230,32 +249,27 @@ spinButton.addEventListener('click', () => {
   // Spin the wheel visually
   wheelElement.style.transform = `rotate(${finalRotation}deg)`;
 
-  // 3) Force the displayed text (separate from wedge text)
+  // 3) Force the displayed text
   let resultText;
   if (attempts <= forcedTexts.length) {
-    // forced text for spins 1..3
     resultText = forcedTexts[attempts - 1];
   } else {
-    // fallback forced text for spin #4, #5, etc. (customize as needed)
     resultText = "You got something else!";
   }
 
-  // After the spin animation finishes
+  // After spin animation
   setTimeout(() => {
     prizeDisplay.textContent = `You got: ${resultText}`;
 
-    // If it's the third spin and we've forced "Rs. 5000," show confetti
     if (attempts === 3 && resultText === "Rs. 5000") {
       winMessage.style.display = 'block';
       confetti();
     }
     
-    // === DISABLE SPINS AFTER 3 ATTEMPTS ===
-    // If the user has spun 3 times, disable the spin button permanently.
+    // Stop after 3 spins
     if (attempts >= 3) {
       spinButton.disabled = true;
     } else {
-      // Otherwise, re-enable for next spin (attempts < 3).
       spinButton.disabled = false;
     }
 
