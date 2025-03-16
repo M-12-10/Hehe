@@ -6,20 +6,22 @@
   <title>Spin & Win: Eidi</title>
   <style>
     * {
-      margin: 0; 
-      padding: 0; 
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     body {
+      /* Let the page scroll if needed, so nothing cuts off on narrower screens */
       background: linear-gradient(135deg, #6e45e2, #88d3ce);
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      /* Don’t hide overflow, allow scrolling for smaller screens */
       padding: 20px;
     }
+
     .container {
       background-color: rgba(255, 255, 255, 0.9);
       border-radius: 20px;
@@ -30,11 +32,13 @@
       max-width: 600px;
       margin: auto;
     }
+
     h1 {
       color: #333;
       margin-bottom: 20px;
       font-size: 28px;
     }
+
     .prize-display {
       font-size: 24px; 
       font-weight: bold;
@@ -42,6 +46,7 @@
       min-height: 36px; 
       color: #333;
     }
+
     .win-message {
       font-size: 28px; 
       color: #FF5722; 
@@ -50,41 +55,48 @@
       display: none;
       animation: pulse 1s infinite alternate;
     }
+
     @keyframes pulse {
       from { transform: scale(1); }
       to   { transform: scale(1.05); }
     }
-    /* Make wheel responsive: up to 300px, but can shrink if screen is narrower */
+
+    /* 
+      By default, clamp the wheel to between 220px and 300px 
+      based on 50% of the viewport width. 
+    */
     .wheel-container {
       position: relative;
-      width: min(300px, 80vw);
-      height: min(300px, 80vw);
+      width: clamp(220px, 50vw, 300px);
+      height: clamp(220px, 50vw, 300px);
       margin: 20px auto;
     }
+
     .wheel {
-      width: 100%; 
+      width: 100%;
       height: 100%;
       position: relative; 
-      border-radius: 50%; 
+      border-radius: 50%;
       overflow: hidden;
       transition: transform 4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
       transform: rotate(0deg);
       box-shadow: 0 0 0 5px #333, 0 0 0 15px #e6e6e6;
     }
+
     .wheel-section {
       position: absolute; 
       width: 50%; 
       height: 50%;
-      transform-origin: bottom right; 
+      transform-origin: bottom right;
       display: flex;
       align-items: center; 
       justify-content: center; 
       overflow: hidden;
     }
+
     .pointer {
-      position: absolute; 
-      /* Slightly lower so it stays within the card for small screens */
-      top: -18px; 
+      position: absolute;
+      top: -18px; /* Adjust as needed to keep pointer in view */
       left: calc(50% - 20px);
       width: 40px; 
       height: 40px; 
@@ -92,61 +104,77 @@
       clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
       z-index: 10;
     }
+
     .spin-button {
-      background-color: #FF5722; 
-      color: white; 
+      background-color: #FF5722;
+      color: white;
       border: none;
-      padding: 12px 24px; 
-      font-size: 20px; 
+      padding: 12px 24px;
+      font-size: 20px;
       border-radius: 30px;
-      cursor: pointer; 
-      margin-top: 20px; 
+      cursor: pointer;
+      margin-top: 20px;
       transition: all 0.3s ease;
       box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
     }
+
     .spin-button:hover {
       background-color: #E64A19; 
       transform: translateY(-2px);
       box-shadow: 0 7px 20px rgba(255, 87, 34, 0.5);
     }
+
     .spin-button:disabled {
-      background-color: #cccccc; 
-      cursor: not-allowed; 
+      background-color: #cccccc;
+      cursor: not-allowed;
       box-shadow: none;
     }
+
     .spin-count {
       font-size: 14px; 
       color: #666; 
       margin-top: 10px;
     }
+
     .section-content {
       position: absolute; 
       top: 50%; 
       left: 50%;
       transform: translate(-50%, -50%) rotate(0deg);
-      color: white; 
-      font-weight: bold; 
+      color: white;
+      font-weight: bold;
       font-size: 16px;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-      z-index: 5; 
-      width: 80px; 
-      text-align: center; 
+      z-index: 5;
+      width: 80px;
+      text-align: center;
       line-height: 1.2;
+    }
+
+    /* Media query to reduce even more for screens up to 720px wide or 1600px high */
+    @media (max-width: 720px), (max-height: 1600px) {
+      .wheel-container {
+        width: clamp(180px, 45vw, 250px);
+        height: clamp(180px, 45vw, 250px);
+      }
+      .pointer {
+        top: -14px; /* Pull pointer in a bit closer */
+      }
     }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>Spin & Win: Eidi</h1>
-  
+
   <div class="wheel-container">
     <div class="pointer"></div>
     <div class="wheel" id="wheel"></div>
   </div>
-  
+
   <div class="prize-display" id="prizeDisplay">Spin the wheel to win prizes!</div>
   <div class="win-message" id="winMessage">Congratulations! You won Rs. 5000! 🎉</div>
-  
+
   <button class="spin-button" id="spinButton">SPIN</button>
   <div class="spin-count" id="spinCount">Attempts: 0</div>
 </div>
@@ -167,19 +195,16 @@ const sections = [
 const wheelElement = document.getElementById('wheel');
 const wheelContainer = document.querySelector('.wheel-container');
 
-// We’ll fill these after the wheel is rendered
 let anglePerSection, sectionRadius;
 
-// Build the wheel (visual only) once DOM is ready
+// Build the wheel once the DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
   const containerSize = wheelContainer.offsetWidth;
-  // Each wedge is 1/N of 360
   anglePerSection = 360 / sections.length;
-  // Radius is half of container width
   sectionRadius = containerSize / 2;
 
-  // Create each wedge and text
   sections.forEach((section, index) => {
+    // Wedge
     const sectionElement = document.createElement('div');
     sectionElement.className = 'wheel-section';
     sectionElement.style.backgroundColor = section.color;
@@ -187,22 +212,20 @@ document.addEventListener("DOMContentLoaded", () => {
       `rotate(${index * anglePerSection}deg) skewY(${90 - anglePerSection}deg)`;
     wheelElement.appendChild(sectionElement);
     
-    // Create text
+    // Text
     const contentElement = document.createElement('div');
     contentElement.className = 'section-content';
     contentElement.textContent = section.text;
     
     const centerAngle = index * anglePerSection + anglePerSection / 2;
     const radians = (centerAngle * Math.PI) / 180;
+    const textRadius = sectionRadius * 0.6; // Move text 60% toward outer edge
 
-    // Position text so it’s near the outer edge
-    const textRadius = sectionRadius * 0.6;
     const x = sectionRadius + textRadius * Math.cos(radians);
     const y = sectionRadius + textRadius * Math.sin(radians);
 
     contentElement.style.left = `${x}px`;
     contentElement.style.top  = `${y}px`;
-    // Rotate text outward for readability
     contentElement.style.transform = 
       `translate(-50%, -50%) rotate(${centerAngle}deg)`;
     
@@ -210,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// ====== FORCED LANDING & FORCED TEXT LOGIC ======
+// ====== FORCED LOGIC ======
 let attempts = 0;
 let spinning = false;
 
@@ -219,20 +242,20 @@ const prizeDisplay = document.getElementById('prizeDisplay');
 const spinCount = document.getElementById('spinCount');
 const winMessage = document.getElementById('winMessage');
 
-// Force these wedge indices for the first 3 spins:
-const forcedIndices = [2, 6, 0]; 
-// Force these display texts for the first 3 spins:
+// Force these wedge indices for first 3 spins
+const forcedIndices = [2, 6, 0];
+// Force these display texts for first 3 spins
 const forcedTexts   = ["Try Again", "Try Again", "Rs. 5000"];
 
 spinButton.addEventListener('click', () => {
   if (spinning) return;
   spinning = true;
   spinButton.disabled = true;
-
+  
   attempts++;
   spinCount.textContent = `Attempts: ${attempts}`;
-
-  // 1) Pick the wedge index to land on
+  
+  // 1) Choose wedge index
   let targetIndex;
   if (attempts <= forcedIndices.length) {
     targetIndex = forcedIndices[attempts - 1];
@@ -240,16 +263,15 @@ spinButton.addEventListener('click', () => {
     targetIndex = Math.floor(Math.random() * sections.length);
   }
 
-  // 2) Calculate rotation so pointer lands exactly on the wedge center
-  // (anglePerSection is set once the DOM loads)
+  // 2) Calculate final rotation
   const wedgeCenter = (targetIndex + 0.5) * anglePerSection;
   const extraRotations = 5 * 360;
   const finalRotation = extraRotations + (360 - wedgeCenter);
 
-  // Spin the wheel visually
+  // Spin the wheel
   wheelElement.style.transform = `rotate(${finalRotation}deg)`;
 
-  // 3) Force the displayed text
+  // 3) Determine forced display text
   let resultText;
   if (attempts <= forcedTexts.length) {
     resultText = forcedTexts[attempts - 1];
@@ -257,27 +279,25 @@ spinButton.addEventListener('click', () => {
     resultText = "You got something else!";
   }
 
-  // After spin animation
+  // After spin finishes
   setTimeout(() => {
     prizeDisplay.textContent = `You got: ${resultText}`;
-
     if (attempts === 3 && resultText === "Rs. 5000") {
       winMessage.style.display = 'block';
       confetti();
     }
     
-    // Stop after 3 spins
+    // Stop spins after 3 attempts
     if (attempts >= 3) {
       spinButton.disabled = true;
     } else {
       spinButton.disabled = false;
     }
-
     spinning = false;
   }, 4000);
 });
 
-// ====== CONFETTI WHEN WINNING ======
+// ====== CONFETTI ======
 function confetti() {
   for (let i = 0; i < 80; i++) {
     const c = document.createElement('div');
